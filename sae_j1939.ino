@@ -40,18 +40,22 @@ void setup()
 
 //  j1939.SetMessageFilter(59999);
  
- if (j1939.SetMessageFilter(65242) == OK)
- {
-  Serial.println("Message filter set for PGN");
- }
- if (j1939.SetMessageFilter(65269) == OK)
- {
-  Serial.println("Message filter set for PGN");
- }
- if (j1939.SetMessageFilter(65257) == OK)
- {
-  Serial.println("Message filter set for PGN");
- }
+//  if (j1939.SetMessageFilter(65242) == OK)
+//  {
+//   Serial.println("Message filter set for PGN");
+//  }
+//  if (j1939.SetMessageFilter(65269) == OK)
+//  {
+//   Serial.println("Message filter set for PGN");
+//  }
+//  if (j1939.SetMessageFilter(65257) == OK)
+//  {
+//   Serial.println("Message filter set for PGN");
+//  }
+
+  if (j1939.SetMessageFilter(61444) == OK) { // RPM PGN
+    Serial.println("Message filter set for PGN 61444 (RPM).");
+  }
 
 
   j1939.SetNAME(NAME_IDENTITY_NUMBER,
@@ -83,8 +87,11 @@ void loop()
     nCounter++;
     if (nCounter == (int)(1000 / SYSTEM_TIME)) {
       nSrcAddr = j1939.GetSourceAddress();
-      Serial.println("Transmitting periodic message...");
-      if (j1939.Transmit(6, 65280, nSrcAddr, 255, msgData, 8) == OK) Serial.println("Message transmitted.");
+      // Serial.println("Transmitting periodic message...");
+      if (j1939.Transmit(6, 65280, nSrcAddr, 255, msgData, 8) == OK) 
+      {
+        // Serial.println("Message transmitted.");
+      }
       nCounter = 0;
       nCounter = 0;
     }
@@ -107,34 +114,52 @@ void loop()
   
   // }// end if
 
-  if (nMsgId == J1939_MSG_APP) {
-    Serial.print("Received message: PGN: ");
-    // Serial.print(lPGN, HEX);
-    Serial.print(lPGN);
-    Serial.print(", DA: ");
-    Serial.print(nDestAddr);
-    Serial.print(", SA: ");
-    Serial.print(nSrcAddr);
-    Serial.print(", P: ");
-    Serial.print(nPriority);
-    Serial.print(", Data: ");
-    for (byte cIndex = 0; cIndex < nMsgLen; cIndex++) {
-      Serial.print(pMsg[cIndex], HEX);
-      Serial.print(" ");
+  // if (nMsgId == J1939_MSG_APP) {
+  //   Serial.print("Received message: PGN: ");
+  //   // Serial.print(lPGN, HEX);
+  //   Serial.print(lPGN);
+  //   Serial.print(", DA: ");
+  //   Serial.print(nDestAddr);
+  //   Serial.print(", SA: ");
+  //   Serial.print(nSrcAddr);
+  //   Serial.print(", P: ");
+  //   Serial.print(nPriority);
+  //   Serial.print(", Data: ");
+  //   for (byte cIndex = 0; cIndex < nMsgLen; cIndex++) {
+  //     Serial.print(pMsg[cIndex], HEX);
+  //     Serial.print(" ");
+  //   }
+  //   Serial.println();
+  // }
+
+  if (nMsgId == J1939_MSG_APP && lPGN == 61444) { // Process RPM messages
+    if (nMsgLen >= 5) { // Ensure enough data for RPM field
+      // Decode RPM from bytes 4-5
+      uint16_t rawRPM = pMsg[3] | (pMsg[4] << 8);
+      float engineRPM = rawRPM * 0.125; // Apply scaling factor
+
+      // Clear screen (VT100 terminal escape code)
+      Serial.write(27); // ESC
+      Serial.print("[2J"); // Clear screen
+      Serial.write(27); // ESC
+      Serial.print("[H"); // Cursor to home
+
+      // Print RPM
+      Serial.print("Engine RPM: ");
+      Serial.println(engineRPM, 2); // Print with 2 decimal places
     }
-    Serial.println();
   }
 
   if (nMsgId == J1939_MSG_APP) {
     switch (nJ1939Status) {
       case ADDRESSCLAIM_INPROGRESS:
-        Serial.println("Address claim in progress...");
+        // Serial.println("Address claim in progress...");
         break;
       case NORMALDATATRAFFIC:
-        Serial.println("Normal data traffic ongoing...");
+        // Serial.println("Normal data traffic ongoing...");
         break;
       case ADDRESSCLAIM_FAILED:
-        Serial.println("Address claim failed!");
+        // Serial.println("Address claim failed!");
         break;
     }
   }
