@@ -1,41 +1,35 @@
-// ------------------------------------------------------------------------------------------------------
-// Project: JCOM_J1939_ARD
-// File:    can.cpp
-// ------------------------------------------------------------------------------------------------------
-#include "ESP32CAN.h"
-#include "CAN_config.h"
+#include "ACAN_ESP32.h"
 
 #define OK                                    0
 #define ERR                                   1
 
 // Module variables -------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------
-CAN_device_t CAN_cfg;
-long lCANBaudrate = CAN_SPEED_250KBPS;
-#define QUEUELENGTH 20
+uint32_t errorCode = 0;
+uint32_t DESIRED_BIT_RATE = 250UL * 1000UL; // 250 kbps
+long lCANBaudrate = 250UL * 1000UL;
 
 // ------------------------------------------------------------------------------------------------------
 // canInit
 // ------------------------------------------------------------------------------------------------------
 // lBaudrate = CAN_SPEED_250KBPS/CAN_SPEED_500KBPS
 //
-unsigned char canInit(long lBaudrate)
-{
-    // Stop the CAN port
-    ESP32Can.CANStop();
-    
+unsigned char canInit(long lBaudrate) {
     // Configure the CAN Module
-    CAN_cfg.speed = (CAN_speed_t)lBaudrate;
-    CAN_cfg.tx_pin_id = GPIO_NUM_25;
-    CAN_cfg.rx_pin_id = GPIO_NUM_26;
-    CAN_cfg.rx_queue = xQueueCreate(QUEUELENGTH,sizeof(CAN_frame_t));
-    
-    // Start the CAN Module
-    ESP32Can.CANInit(); // Always returns 0 = OK
+    DESIRED_BIT_RATE = lBaudrate;
+    ACAN_ESP32_Settings CAN_settings (DESIRED_BIT_RATE);
+    CAN_settings.mRxPin = GPIO_NUM_5; // Replace with your desired Rx pin
+    CAN_settings.mTxPin = GPIO_NUM_18; // Replace with your desired Tx pin
+    CAN_settings.mRequestedCANMode = ACAN_ESP32_Settings::NormalMode; // Set to normal mode
 
+    errorCode = ACAN_ESP32::can.begin(CAN_settings);
+
+    // Check for configuration errors
+    if (errorCode != 0) {
+        return ERR;
+    }
     return OK;
-
-}// end canInit
+}
 
 // ------------------------------------------------------------------------------------------------------
 // canCheckError
@@ -43,80 +37,64 @@ unsigned char canInit(long lBaudrate)
 // 0 - No Error
 // 1 - Errors exist
 //
-// For the purpose of detecting message ID collisions under SAE J1939, we check only TX errors
-//
-unsigned char canCheckError(void)
-{
+unsigned char canCheckError(void) {
     // Declarations
     unsigned char ErrorFlag = 0;
-    
-    int RXErrors = 0;
-    int TXErrors = 0;
 
-    // Check for errors
-    ESP32Can.CANError(&TXErrors, &RXErrors);
-    if(TXErrors > 0)
+    // Retrieve error counts
+    uint8_t txErrors = TWAI_TX_ERR_CNT_REG;
+    uint8_t rxErrors = TWAI_RX_ERR_CNT_REG;
+
+    // Check for transmission errors
+    if (txErrors > 0) {
         ErrorFlag = 1;
+    }
 
-    // Return the result
     return ErrorFlag;
-    
-}// end canCheckError
+}
 
 // ------------------------------------------------------------------------------------------------------
 // canTransmit
 // ------------------------------------------------------------------------------------------------------
-unsigned char canTransmit(long lID, unsigned char* pData, int nDataLen)
-{
+unsigned char canTransmit(long lID, unsigned char* pData, int nDataLen) {
     // Declarations
-    unsigned char nRetCode = ERR;
-    CAN_frame_t tx_frame;
+    CANMessage frame;
 
-    // Copy all information into the structure
-    tx_frame.FIR.B.FF = CAN_frame_ext;
-    tx_frame.MsgID = (uint32_t)lID;
-    tx_frame.FIR.B.DLC = (uint8_t)nDataLen;
+    // Configure the CAN frame
+    frame.id = (uint32_t)lID;
+    frame.len = nDataLen > 8 ? 8 : nDataLen; // Limit to 8 bytes
+    for (int i = 0; i < frame.len; i++) {
+        frame.data[i] = pData[i];
+    }
 
-    for(int nIndex = 0; nIndex < nDataLen; nIndex++)
-        tx_frame.data.u8[nIndex] = pData[nIndex];
-
-    // Transmit the CAN message frame
-    if(ESP32Can.CANWriteFrame(&tx_frame) == 0)
-        nRetCode = OK;
-
-    return nRetCode;
-    
-}// end canTransmit
+    // Transmit the frame
+    if (ACAN_ESP32::can.tryToSend(frame)) {
+        return OK;
+    } else {
+        return ERR;
+    }
+}
 
 // ------------------------------------------------------------------------------------------------------
 // canReceive
 // ------------------------------------------------------------------------------------------------------
-unsigned char canReceive(long* lID, unsigned char* pData, int* nDataLen)
-{
+unsigned char canReceive(long* lID, unsigned char* pData, int* nDataLen) {
     // Declarations
-    unsigned char nRetCode = ERR;
-    CAN_frame_t rx_frame;
+    CANMessage frame;
 
-    if(xQueueReceive(CAN_cfg.rx_queue,&rx_frame, 3*portTICK_PERIOD_MS) == pdTRUE)
-    {
-        // Check for extended frame
-        if(rx_frame.FIR.B.FF == CAN_frame_ext)
-        {
-            // Copy the information from the structure
-            *lID = rx_frame.MsgID;
-            *nDataLen = rx_frame.FIR.B.DLC;
+    // Check if a frame is available
+    if (ACAN_ESP32::can.receive(frame)) {
+        *lID = frame.id;
+        *nDataLen = frame.len;
 
-            for(int nIndex = 0; nIndex < *nDataLen; nIndex++)
-                pData[nIndex] = rx_frame.data.u8[nIndex];
+        for (int i = 0; i < *nDataLen; i++) {
+            pData[i] = frame.data[i];
+        }
 
-            nRetCode = OK;
+        return OK;
+    }
 
-        }// end if
-
-    }// end if
-
-    return nRetCode;
-    
-}// end canTransmit
+    return ERR;
+}
 
 // end can.cpp
