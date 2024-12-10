@@ -49,6 +49,16 @@ void setup()
   j1939.SetMessageFilter(PGN_IC1);
   j1939.SetMessageFilter(PGN_TCO1);
 
+
+  j1939.SetMessageFilter(PGN_65265);
+  j1939.SetMessageFilter(PGN_65248);
+  j1939.SetMessageFilter(PGN_65253);
+  j1939.SetMessageFilter(PGN_65276);
+  j1939.SetMessageFilter(PGN_65271);
+  j1939.SetMessageFilter(PGN_65263);
+  j1939.SetMessageFilter(PGN_65266);
+  j1939.SetMessageFilter(PGN_65244);
+
   j1939.SetNAME(NAME_IDENTITY_NUMBER,
                NAME_MANUFACTURER_CODE,
                NAME_FUNCTION_INSTANCE,
