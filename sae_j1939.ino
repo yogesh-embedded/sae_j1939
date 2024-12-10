@@ -19,6 +19,9 @@
 
 ARD1939 j1939;
 
+J1939Data j1939Data;
+
+
 int nCounter = 0;
 
 void setup() 
@@ -38,25 +41,13 @@ void setup()
   j1939.SetAddressRange(ADDRESSRANGEBOTTOM, ADDRESSRANGETOP);
   Serial.println("Address range set.");
 
-//  j1939.SetMessageFilter(59999);
- 
-//  if (j1939.SetMessageFilter(65242) == OK)
-//  {
-//   Serial.println("Message filter set for PGN");
-//  }
-//  if (j1939.SetMessageFilter(65269) == OK)
-//  {
-//   Serial.println("Message filter set for PGN");
-//  }
-//  if (j1939.SetMessageFilter(65257) == OK)
-//  {
-//   Serial.println("Message filter set for PGN");
-//  }
-
-  if (j1939.SetMessageFilter(61444) == OK) { // RPM PGN
-    Serial.println("Message filter set for PGN 61444 (RPM).");
-  }
-
+  j1939.SetMessageFilter(PGN_ET1);
+  j1939.SetMessageFilter(PGN_AMB);
+  j1939.SetMessageFilter(PGN_LFC);
+  j1939.SetMessageFilter(PGN_EEC1);
+  j1939.SetMessageFilter(PGN_EEC2);
+  j1939.SetMessageFilter(PGN_IC1);
+  j1939.SetMessageFilter(PGN_TCO1);
 
   j1939.SetNAME(NAME_IDENTITY_NUMBER,
                NAME_MANUFACTURER_CODE,
@@ -87,79 +78,43 @@ void loop()
     nCounter++;
     if (nCounter == (int)(1000 / SYSTEM_TIME)) {
       nSrcAddr = j1939.GetSourceAddress();
-      // Serial.println("Transmitting periodic message...");
+      DEBUG_PRINTLN("Transmitting periodic message...");
       if (j1939.Transmit(6, 65280, nSrcAddr, 255, msgData, 8) == OK) 
       {
-        // Serial.println("Message transmitted.");
+        DEBUG_PRINTLN("Message transmitted.");
       }
       nCounter = 0;
       nCounter = 0;
     }
   }
 
+  if (nMsgId == J1939_MSG_APP) { 
+      parseJ1939Message(static_cast<PGN>(lPGN), pMsg, nMsgLen, j1939Data);
+      // printDynamicData(j1939Data);
+  }
 
-  // Send out a periodic message with a length of more than 8 bytes
-  // BAM Session
-  // if(nJ1939Status == NORMALDATATRAFFIC)
-  // {
-  //   nCounter++;
-    
-  //   if(nCounter == (int)(1000/SYSTEM_TIME))
-  //   {
-  //     nSrcAddr = j1939.GetSourceAddress();
-  //     j1939.Transmit(6, 59999, nSrcAddr, 255, msgLong, 15);
-  //     nCounter = 0;
-      
-    // }// end if
-  
-  // }// end if
+  {
+    static unsigned long lastPrintTime = 0; // Tracks the last time the function was called
+    unsigned long currentMillis = millis();
+    // Check if 100 ms have passed since the last call
+    if (currentMillis - lastPrintTime >= 100) {
+        lastPrintTime = currentMillis; // Update the last call time
 
-  // if (nMsgId == J1939_MSG_APP) {
-  //   Serial.print("Received message: PGN: ");
-  //   // Serial.print(lPGN, HEX);
-  //   Serial.print(lPGN);
-  //   Serial.print(", DA: ");
-  //   Serial.print(nDestAddr);
-  //   Serial.print(", SA: ");
-  //   Serial.print(nSrcAddr);
-  //   Serial.print(", P: ");
-  //   Serial.print(nPriority);
-  //   Serial.print(", Data: ");
-  //   for (byte cIndex = 0; cIndex < nMsgLen; cIndex++) {
-  //     Serial.print(pMsg[cIndex], HEX);
-  //     Serial.print(" ");
-  //   }
-  //   Serial.println();
-  // }
-
-  if (nMsgId == J1939_MSG_APP && lPGN == 61444) { // Process RPM messages
-    if (nMsgLen >= 5) { // Ensure enough data for RPM field
-      // Decode RPM from bytes 4-5
-      uint16_t rawRPM = pMsg[3] | (pMsg[4] << 8);
-      float engineRPM = rawRPM * 0.125; // Apply scaling factor
-
-      // Clear screen (VT100 terminal escape code)
-      Serial.write(27); // ESC
-      Serial.print("[2J"); // Clear screen
-      Serial.write(27); // ESC
-      Serial.print("[H"); // Cursor to home
-
-      // Print RPM
-      Serial.print("Engine RPM: ");
-      Serial.println(engineRPM, 2); // Print with 2 decimal places
+        // Call the function to print dynamic data
+        printDynamicData(j1939Data);
     }
   }
 
   if (nMsgId == J1939_MSG_APP) {
     switch (nJ1939Status) {
       case ADDRESSCLAIM_INPROGRESS:
-        // Serial.println("Address claim in progress...");
+        DEBUG_PRINTLN("Address claim in progress...");
         break;
       case NORMALDATATRAFFIC:
-        // Serial.println("Normal data traffic ongoing...");
+        DEBUG_PRINTLN("Normal data traffic ongoing...");
         break;
       case ADDRESSCLAIM_FAILED:
-        // Serial.println("Address claim failed!");
+        DEBUG_PRINTLN("Address claim failed!");
         break;
     }
   }

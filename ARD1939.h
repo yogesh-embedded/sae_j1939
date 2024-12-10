@@ -53,6 +53,17 @@
 // Debugger Settings
 #define DEBUG                                 0
 
+
+enum PGN {
+    PGN_ET1 = 65262,  // Engine Temperature 1
+    PGN_AMB = 65269,  // Ambient Conditions
+    PGN_LFC = 65257,  // Fuel Consumption (Liquid)
+    PGN_EEC1 = 61444, // Electronic Engine Controller 1
+    PGN_EEC2 = 61443, // Electronic Engine Controller 2
+    PGN_IC1 = 65270,  // Inlet/Exhaust Conditions 1
+    PGN_TCO1 = 65132  // Tachograph
+};
+
 #if DEBUG == 1
 
   #define DEBUG_INIT() char sDebug[128];
@@ -61,6 +72,20 @@
   #define DEBUG_PRINTARRAYHEX(T, a, l) Serial.print(T); if(l == 0) Serial.print("Empty.\n\r"); else {for(int x=0; x<l; x++){sprintf(sDebug, "%x ", a[x]); Serial.print(sDebug);} Serial.print("\n\r");}
   #define DEBUG_PRINTARRAYDEC(T, a, l) Serial.print(T); if(l == 0) Serial.print("Empty.\n\r"); else {for(int x=0; x<l; x++){sprintf(sDebug, "%d ", a[x]); Serial.print(sDebug);} Serial.print("\n\r");}
   #define DEBUG_HALT() while(Serial.available() == 0); Serial.setTimeout(1); Serial.readBytes(sDebug, 1);
+  #define DEBUG_PRINT(T)      Serial.print(T);
+  #define DEBUG_PRINTLN(T)      Serial.println(T);
+
+#else
+
+  #define DEBUG_INIT()                                ;
+  #define DEBUG_PRINTHEX(T, v)                        ;
+  #define DEBUG_PRINTDEC(T, v)                        ;
+  #define DEBUG_PRINTARRAYHEX(T, a, l)                ;
+  #define DEBUG_PRINTARRAYDEC(T, a, l)                ;
+  #define DEBUG_HALT()                                ;
+  #define DEBUG_PRINT(T)                              ;
+  #define DEBUG_PRINTLN(T)                            ;
+
 
 #endif
 
@@ -110,5 +135,106 @@ class ARD1939
 #endif
   
 }; // end class ARD1939
+
+
+struct PGN65262_ET1 {
+    int8_t coolant_temp;
+    int8_t fuel_temp;
+    int16_t oil_temp;
+    int16_t turbo_oil_temp;
+    int8_t intercooler_temp;
+    int8_t intercooler_thermostat_opening;
+};
+
+struct PGN65269_AMB {
+    int8_t barometric_pressure;
+    int16_t cab_interior_temp;
+    int16_t ambient_air_temp;
+    int8_t air_inlet_temp;
+    int16_t road_surface_temp;
+};
+
+struct PGN65257_LFC {
+    uint32_t engine_trip_fuel;
+    uint32_t engine_total_fuel_used;
+};
+
+struct PGN61444_EEC1 {
+    uint8_t engine_torque_mode;
+    uint8_t driver_percent_torque;
+    uint8_t actual_percent_torque;
+    float engine_speed; // RPM
+    uint8_t source_address;
+    uint8_t starter_mode;
+    uint8_t engine_demand_percent_torque;
+};
+
+struct AcceleratorPedalSwitch {
+    uint8_t low_idle_switch : 2;      // SPN 558
+    uint8_t kickdown_switch : 2;     // SPN 559
+    uint8_t speed_limit_status : 2;  // SPN 1437
+    uint8_t low_idle_switch_2 : 2;   // SPN 2970
+};
+
+struct VehicleAccelerationStatus {
+    uint8_t acceleration_rate_limit : 2; // SPN 2979
+};
+
+struct EEC2 {
+    AcceleratorPedalSwitch accel_pedal_switch; // SPN 558, 559, 1437, 2970
+    uint8_t accel_pedal_pos1;                 // SPN 91
+    uint8_t engine_percent_load;             // SPN 92
+    uint8_t remote_accel_pedal_pos;          // SPN 974
+    uint8_t accel_pedal_pos2;                // SPN 29
+    VehicleAccelerationStatus accel_status;  // SPN 2979
+    uint8_t max_available_torque;            // SPN 3357
+};
+
+struct IC1 {
+    uint8_t particulate_trap_inlet_pressure;  // SPN 81
+    uint8_t intake_manifold_pressure;        // SPN 102
+    uint8_t intake_manifold_temperature;     // SPN 105
+    uint8_t air_inlet_pressure;              // SPN 106
+    uint8_t air_filter_differential_pressure; // SPN 107
+    uint16_t exhaust_gas_temperature;        // SPN 173
+    uint8_t coolant_filter_differential_pressure; // SPN 112
+};
+
+
+struct TCO1 {
+    uint8_t driver1_working_state : 3;  // SPN 1612 (3 bits)
+    uint8_t driver2_working_state : 3;  // SPN 1613 (3 bits)
+    uint8_t vehicle_motion : 2;         // SPN 1611 (2 bits)
+
+    uint8_t driver1_time_related_states : 4; // SPN 1617 (4 bits)
+    uint8_t driver_card_driver1 : 2;         // SPN 1615 (2 bits)
+    uint8_t vehicle_overspeed : 2;           // SPN 1614 (2 bits)
+
+    uint8_t driver2_time_related_states : 4; // SPN 1618 (4 bits)
+    uint8_t driver_card_driver2 : 2;         // SPN 1616 (2 bits)
+    uint8_t system_event : 2;                // SPN 1622 (2 bits)
+
+    uint8_t handling_information : 2;        // SPN 1621 (2 bits)
+    uint8_t tachograph_performance : 2;      // SPN 1620 (2 bits)
+    uint8_t direction_indicator : 2;         // SPN 1619 (2 bits)
+
+    uint16_t output_shaft_speed;             // SPN 1623 (16 bits)
+    uint16_t vehicle_speed;                  // SPN 1624 (16 bits, variable with pot)
+};
+
+
+struct J1939Data {
+    PGN65262_ET1 et1;
+    PGN65269_AMB amb;
+    PGN65257_LFC lfc;
+    PGN61444_EEC1 eec1;
+    EEC2 eec2;
+    IC1 ic1;
+    TCO1 tco1;
+};
+
+void parseJ1939Message(PGN pgn, const uint8_t* pMsg, int nMsgLen, J1939Data& data);
+void printDynamicData(const J1939Data& data);
+
 
 #endif

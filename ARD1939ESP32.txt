@@ -186,3 +186,26 @@ void loop()
   }// end if
     
 }// end loop
+
+
+
+Here are the top parameters we need to prioritize for the ELD device. These are crucial for compliance and monitoring
+
+Engine Speed (RPM) - SPN 190
+Vehicle Speed - SPN 84 //wheel based vehicle speed 
+Total Vehicle Distance - SPN 245
+Engine Total Hours of Operation - SPN 247
+Fuel Level - SPN 96
+Battery Voltage - SPN 158
+Engine Oil Pressure - SPN 100
+Engine Coolant Temperature - SPN 110
+Throttle Position - SPN 91
+Engine Torque - SPN 513
+Ambient Air Temperature - SPN 171
+Intake Manifold Pressure - SPN 102
+Engine Fuel Rate - SPN 183
+Service Brake Air Pressure - SPN 108
+Engine Total Fuel Used - SPN 250
+Engine Idle Hours - SPN 235
+
+These parameters are the first priority for us.
