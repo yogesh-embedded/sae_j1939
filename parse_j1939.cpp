@@ -119,6 +119,93 @@ void parseJ1939Message(PGN pgn, const uint8_t* pMsg, int nMsgLen, J1939Data& dat
             }
             break;
 
+        case PGN_65265:
+            if (nMsgLen >= 8) {
+                // SPN 84: Wheel-Based Vehicle Speed (Bytes 2-3, 16 bits, resolution 1/256 km/h)
+                data.ccvs.wheel_based_vehicle_speed = ((pMsg[1] | (pMsg[2] << 8)) * 0.00390625); // Convert to km/h
+            }
+            break;
+
+        case PGN_65248:
+            if (nMsgLen >= 8) {
+                // SPN 244: Trip Distance (Bytes 1-4, 32 bits)
+                data.vehicle_distance_status.trip_distance = 
+                    (uint32_t)pMsg[0]       | 
+                    ((uint32_t)pMsg[1] << 8)  | 
+                    ((uint32_t)pMsg[2] << 16) | 
+                    ((uint32_t)pMsg[3] << 24);
+
+                // SPN 245: Total Vehicle Distance (Bytes 5-8, 32 bits)
+                data.vehicle_distance_status.total_vehicle_distance = 
+                    (uint32_t)pMsg[4]       | 
+                    ((uint32_t)pMsg[5] << 8)  | 
+                    ((uint32_t)pMsg[6] << 16) | 
+                    ((uint32_t)pMsg[7] << 24);
+            }
+            break;
+
+        case PGN_65253:
+            if (nMsgLen >= 8) {
+                // SPN 247: Total Engine Hours (Bytes 1-4, 32 bits)
+                data.engine_hours_revolutions.total_engine_hours = 
+                    (uint32_t)pMsg[0]       | 
+                    ((uint32_t)pMsg[1] << 8)  | 
+                    ((uint32_t)pMsg[2] << 16) | 
+                    ((uint32_t)pMsg[3] << 24);
+
+                // SPN 249: Total Engine Revolutions (Bytes 5-8, 32 bits)
+                data.engine_hours_revolutions.total_engine_revolutions = 
+                    (uint32_t)pMsg[4]       | 
+                    ((uint32_t)pMsg[5] << 8)  | 
+                    ((uint32_t)pMsg[6] << 16) | 
+                    ((uint32_t)pMsg[7] << 24);
+            }
+            break;
+
+        case PGN_65276:
+            if (nMsgLen >= 8) {
+
+                // SPN 96: Fuel Level (Byte 2, 8 bits)
+                data.dash_display.fuel_level = pMsg[1];
+            }
+            break;
+
+        case PGN_65271:
+            if (nMsgLen >= 8) {
+                // SPN 158: Battery Potential (Voltage), Switched (Bytes 7-8, 16 bits, resolution 0.05 V)
+                data.vehicle_electrical_power.battery_potential_voltage_switched =
+                    (uint16_t)((pMsg[6] | (pMsg[7] << 8)) * 0.05);
+            }
+            break;
+
+        case PGN_65263:
+            if (nMsgLen >= 8) {
+                // SPN 100: Engine Oil Pressure (Byte 4, 8 bits, resolution 1 kPa)
+                data.engine_fluid_level_pressure.engine_oil_pressure = pMsg[3];  // Byte 4 holds Engine Oil Pressure
+            } else {
+                printf("Invalid message length for PGN 65263.\n");
+            }
+            break;
+
+        case PGN_65266:
+            if (nMsgLen >= 8) {
+                // SPN 183: Fuel Rate (Bytes 1-2, 16 bits, resolution 0.1 L/h)
+                data.fuel_economy_status.fuel_rate = (pMsg[0] | (pMsg[1] << 8)); // Combine Bytes 1 and 2
+            } else {
+                printf("Invalid message length for PGN 65266.\n");
+            }
+            break;
+
+        case PGN_65244:
+            if (nMsgLen >= 8) {
+                // SPN 235: Total Idle Hours (Bytes 1-4, 32 bits)
+                data.idle_operation_status.total_idle_hours = (pMsg[0] | (pMsg[1] << 8) | (pMsg[2] << 16) | (pMsg[3] << 24)); // Combine Bytes 1-4
+            } else {
+                printf("Invalid message length for PGN 65244.\n");
+            }
+            break;
+
+
         default:
             // Serial.println("PGN not recognized or implemented.");
             break;

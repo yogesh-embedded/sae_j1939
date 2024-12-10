@@ -61,7 +61,15 @@ enum PGN {
     PGN_EEC1 = 61444, // Electronic Engine Controller 1
     PGN_EEC2 = 61443, // Electronic Engine Controller 2
     PGN_IC1 = 65270,  // Inlet/Exhaust Conditions 1
-    PGN_TCO1 = 65132  // Tachograph
+    PGN_TCO1 = 65132,  // Tachograph
+    PGN_65265 = 65265,
+    PGN_65248 = 65248,
+    PGN_65253 = 65253,
+    PGN_65276 = 65276,
+    PGN_65271 = 65271,
+    PGN_65263 = 65263,
+    PGN_65266 = 65266,
+    PGN_65244 = 65244,
 };
 
 #if DEBUG == 1
@@ -223,6 +231,67 @@ struct TCO1 {
 };
 
 
+struct PGN65265_CCVS {
+    uint8_t two_speed_axle_switch : 2;       // SPN 69
+    uint8_t parking_brake_switch : 2;       // SPN 70
+    uint8_t cruise_control_pause_switch : 2;// SPN 1633
+    uint16_t wheel_based_vehicle_speed;     // SPN 84
+    uint8_t cruise_control_active : 2;      // SPN 595
+    uint8_t cruise_control_enable_switch : 2; // SPN 596
+    uint8_t brake_switch : 2;               // SPN 597
+    uint8_t clutch_switch : 2;              // SPN 598
+    uint8_t cruise_control_set_switch : 2;  // SPN 599
+    uint8_t cruise_control_coast_switch : 2;// SPN 600
+    uint8_t cruise_control_resume_switch : 2;// SPN 601
+    uint8_t cruise_control_accelerate_switch : 2; // SPN 602
+    uint8_t cruise_control_set_speed;       // SPN 86
+    uint8_t pto_state : 5;                  // SPN 976
+    uint8_t cruise_control_states : 3;      // SPN 527
+    uint8_t idle_increment_switch : 2;      // SPN 968
+    uint8_t idle_decrement_switch : 2;      // SPN 967
+    uint8_t engine_test_mode_switch : 2;    // SPN 966
+    uint8_t engine_shutdown_override_switch : 2; // SPN 1237
+};
+
+
+struct VehicleDistanceStatus {
+    uint32_t trip_distance;          // SPN 244: Trip Distance (4 bytes)
+    uint32_t total_vehicle_distance; // SPN 245: Total Vehicle Distance (4 bytes)
+};
+
+struct EngineHoursRevolutionsStatus {
+    uint32_t total_engine_hours;       // SPN 247
+    uint32_t total_engine_revolutions; // SPN 249
+};
+
+struct DashDisplayStatus {
+    uint8_t washer_fluid_level;              // SPN 80
+    uint8_t fuel_level;                      // SPN 96
+    uint8_t fuel_filter_differential_pressure; // SPN 95
+    uint8_t engine_oil_filter_differential_pressure; // SPN 99
+    int16_t cargo_ambient_temperature;       // SPN 169
+};
+
+struct VehicleElectricalPowerStatus {
+    uint16_t battery_potential_voltage_switched; // SPN 158
+};
+
+struct EngineFluidLevelPressureStatus {
+    uint8_t engine_oil_pressure; // SPN 100
+};
+
+
+struct FuelEconomyStatus {
+    uint16_t fuel_rate; // SPN 183, Fuel Rate in L/h (2 bytes)
+};
+
+struct IdleOperationStatus {
+    uint32_t total_idle_hours; // SPN 235, Total Idle Hours (4 bytes)
+};
+
+
+
+
 struct J1939Data {
     PGN65262_ET1 et1;
     PGN65269_AMB amb;
@@ -231,6 +300,14 @@ struct J1939Data {
     EEC2 eec2;
     IC1 ic1;
     TCO1 tco1;
+    PGN65265_CCVS ccvs;
+    VehicleDistanceStatus vehicle_distance_status;
+    EngineHoursRevolutionsStatus engine_hours_revolutions;
+    DashDisplayStatus dash_display;
+    VehicleElectricalPowerStatus vehicle_electrical_power;
+    EngineFluidLevelPressureStatus engine_fluid_level_pressure;
+    FuelEconomyStatus fuel_economy_status;
+    IdleOperationStatus idle_operation_status;
 };
 
 void parseJ1939Message(PGN pgn, const uint8_t* pMsg, int nMsgLen, J1939Data& data);
